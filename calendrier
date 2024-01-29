@@ -1,0 +1,399 @@
+<!--
+    README
+    
+    Ce fichier a été volontairement écrit en un seul fichier pour faciliter la 
+    diffusion d'un utilisateur à l'autre.
+    
+    Il est conseillé de ne modifier que les parties concernant les jours fériés
+    dates, actif ou non, ajout, suppression de la forme:
+        {"nom":"nom du jour férié", "date":"JJ/MM", "actif": true/false}
+    
+    La valeur par défaut pour le report des jours fériés tombant un dimanche 
+    peut être changée à false (pas de report) ou true (report). Pour ce faire,
+    changer la ligne "let report = true"
+
+    Ce calendrier peut être librement utilisé, modifié, copié et diffusé. 
+    
+    Si les couleurs n'apparaissent pas à la prévisualisation de l'impression,
+    regarder si les options d'impression du navigateur incluent "imprimer 
+    l'arrière plan"
+-->
+
+
+
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>calendrier</title>
+
+    <style>
+        body{text-align: center;}
+        main{text-align: center; display: flex; flex-direction: row;}
+        #annee{width: 4em; font-size: 4em; font-weight: 900; text-align: center;}
+        .fullYear{display: flex; flex-direction: column;align-items: center;}
+        .trimestre{display: flex; flex-direction: row; padding: 1em;}
+        .month{margin: 0em 2em; text-align: center; border: 2px solid darkblue; 
+            border-radius: 5px; padding: 0em 2em 1em 2em;}
+        table{ border: 1px solid black; border-collapse: collapse; text-align: center;}
+        th{border: 1px solid black; text-align: center; width: 1.5em; height: 1.5em;}
+        td{border: 1px dotted black; text-align: center; padding: 2px; width: 1.5em;
+            height: 1.5em;}
+        .samedi{background-color:#F4B0B0;}
+        .dimanche, .ferie{background-color: #F37777;}
+        .jours_feries{text-align: center; display: flex; flex-direction: column; width: 30%;}
+        .side-item{margin : 5px;}
+        @media print {
+        .jours_feries { display:none; };
+        .fullYear  { display:block; height:61% ; align-items: center;}
+        }
+
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Calendrier de l'année</h1>
+    </header>
+    <main>
+    <div class="fullYear" id="fullYear">
+    <input type="text" id="annee" class="title" maxlength="4" size="6"></input>
+    
+    <!--
+        Emplacement du calendrier, rempli par le script
+    
+    -->
+    </div>
+    </div>
+    <div class="jours_feries">
+        <h2>Jours fériés</h2>
+        <div class="side-item">
+            <label>Report des jours fériés tombant le dimanche?</label>
+            <div>
+                <input type="radio" value="true" name="report" class="radio"> Oui</input>
+                <input type="radio" value="false" name="report" class ="radio"> Non</input>
+            </div>
+        </div>        
+    </div>
+    </main>
+    <footer>
+        <p>Diffusion libre. Ouvrir dans un éditeur de texte pour lire le readme</p>
+    </footer>
+</body>
+</html>
+
+
+
+<!--####################################################################### -->    
+        <script>
+const anneeElement = document.querySelector("#annee")
+const joursFeriesElement = document.querySelector(".jours_feries")
+const reportElement = document.querySelectorAll(".radio")
+
+// Définition des variables utilisées. Les valeurs sont actualisées lors de
+// l'appel à la fonction actualiser_annee, pour la prise en compte des années
+// bisextiles…
+
+let nb_jours = 365
+
+let ma_date = new Date()
+ma_date.setMonth(0)
+ma_date.setDate(1)
+anneeElement.value = ma_date.getFullYear()
+let premier_jour = (ma_date.getDay()+6)%7
+
+let nb_jours_fevrier = 28
+
+const liste_mois = ["janvier", "fevrier", "mars", "avril", "mai", "juin", 
+"juillet", "aout", "septembre", "octobre", "novembre", "decembre"]
+const liste_mois_affichage = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", 
+"Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
+const liste_jours = ["", "Lu", "Ma", "Me", "Je", "Ve", "Sa", "Di"]
+let limites = [31,nb_jours_fevrier,31,30,31,30,31,31,30,31,30,31]
+
+let num_sem = 0
+
+//Modifier ici pour changer les paramètres par défaut #########################
+
+let report = true
+
+let jours_feries = [
+    {"nom": "Jour de l'an", "date": "01/01","actif": true},
+    {"nom": "Épiphanie", "date": "06/01", "actif": true},
+    {"nom": "Mardi gras", "date": "47 j avant Pâques", "actif": true},
+    {"nom": "Jeudi Saint", "date": "3 j avant Pâques", "actif": true},
+    {"nom": "Vendredi Saint", "date": "2 j avant Pâques", "actif": true},
+    {"nom": "Lundi de Pâques", "date": "-1 j après Pâques", "actif": true},
+    {"nom": "1er mai", "date": "01/05", "actif": true},
+    {"nom": "Victoire 45", "date": "08/05", "actif": false},
+    {"nom": "Ascension", "date": "-39 j après Pâques", "actif": false},
+    {"nom": "Pentecôte", "date": "-50 j après Pâques", "actif": false},
+    {"nom": "Locale Gijon", "date": "29/06", "actif": true},
+    {"nom": "Fête nationale", "date": "14/07", "actif": false},
+    {"nom": "Assomption", "date": "15/08", "actif": true},
+    {"nom": "Locale Avilés", "date": "28/08", "actif": true},
+    {"nom": "Locale Avilés", "date": "08/09", "actif": true},
+    {"nom": "Locale Gijon", "date": "12/10", "actif": true},
+    {"nom": "Toussaint", "date": "01/11", "actif": true},
+    {"nom": "Victoire 18", "date": "11/11", "actif": false},
+    {"nom": "Dia de la Constitución", "date": "06/12", "actif": true},
+    {"nom": "Inmaculada concepción", "date": "08/12", "actif": true},
+    {"nom": "Noël", "date": "25/12", "actif": true}
+]
+
+// Fin de zone pour modification ##############################################
+
+// Fonction pour calculer le jour de Pâques (renvoie un objet date correspondant)
+// au dimanche de Pâquse. Formule tirée de la page 
+// https://fr.wikipedia.org/wiki/Calcul_de_la_date_de_P%C3%A2ques
+function calcul_jour_paques(annee){
+    const n = annee%19
+    const c = ~~(annee/100)
+    const u = annee%100
+    const s = ~~(c/4)
+    const t = c%4
+    const p = ~~((c+8)/25)
+    const q = ~~((c-p+1)/3)
+    const e = (19*n+c-s-q+15)%30
+    const b = ~~(u/4)
+    const d = u%4
+    const L = (2*t+2*b-e-d+32)%7
+    const h = ~~((n+11*e+22*L)/451)
+    const m = ~~((e+L-7*h +114)/31)
+    const j = (e+L-7*h +114)%31
+    return new Date(annee,m-1,j+1)
+}
+
+let paques = calcul_jour_paques(anneeElement.value)
+
+// Fonction utilisée pour savoir si un jour apparaît dans la liste des jours fériés
+function jourFerie(jour,mois){
+    let res = false
+    for (let i = 0; i < date_jours_feries.length; i++){
+        if (date_jours_feries[i][0] === jour && date_jours_feries[i][1] === mois){
+            res = true
+        }
+    }
+    return res
+}
+
+// Fonction pour actualiser les constantes (années bisextiles, pâques)
+function actualiser_constantes(){
+    let num_annee = anneeElement.value
+    nb_jours = 365
+    if (num_annee%4 == 0) {
+        if (num_annee%1000 ==0){ 
+            nb_jours = 366
+        } else if (num_annee%100 != 0) {
+            nb_jours = 366
+        }
+    }
+    
+    ma_date.setFullYear(num_annee)
+    premier_jour = (ma_date.getDay()+6)%7
+    
+    if (premier_jour <= 4){num_sem = 1}
+    
+    nb_jours_fevrier = 28
+    if (nb_jours == 366){nb_jours_fevrier=29}
+    limites = [31,nb_jours_fevrier,31,30,31,30,31,31,30,31,30,31]
+    
+    paques = calcul_jour_paques(num_annee)
+    
+    let liste_report = Array.from(reportElement)
+    liste_report = liste_report.filter(elt => elt.checked)
+    report = eval(liste_report[0].value)
+}
+
+
+// Fonction pour actualiser un mois
+function actualiser_mois(mois, premier_jour, num_semaine){
+    const nom_mois = liste_mois[mois]
+    const cases = document.querySelectorAll(`#${nom_mois} td`)
+    const semaines = document.querySelectorAll(`#${nom_mois} .num_sem`)
+    let j = 0 // pour la gestion de l'endroit où écrire le numéro de semaine
+    
+    let jour = premier_jour
+    let semaine = num_semaine
+    
+    //RAZ des cases et des numéros de semaine
+    for (let i=0; i < cases.length; i++){
+        cases[i].innerHTML = ""
+        cases[i].classList.remove ("ferie")
+        cases[i].classList.remove ("samedi")
+        cases[i].classList.remove ("dimanche")
+    }
+    
+    for (let i=0; i < semaines.length; i++){
+        semaines[i].innerHTML = ""
+    }
+    
+    
+    // Ecriture des jours
+    for (let i = 0; i < limites[mois]; i++){
+        semaines[j].innerHTML = semaine
+        cases[i+premier_jour].innerHTML = i+1
+        if (jourFerie(i+1, mois)){
+            cases[i+premier_jour].classList.add("ferie")
+            if ((i+premier_jour)%7 == 6 && report == true){
+                date_jours_feries.push(Array(i+2,mois))
+            }
+        }
+        if ((i+premier_jour)%7 == 5){cases[i+premier_jour].classList.add("samedi")}
+        if ((i+premier_jour)%7 == 6){cases[i+premier_jour].classList.add("dimanche")}
+        
+        jour += 1
+        if ((i+premier_jour)%7 == 6){
+            semaine += 1
+            j += 1
+        }
+    }
+    return Array(jour%7, semaine)
+
+}
+
+
+// Actualise tout l'affichage
+function actualiser_annee(){
+    actualiser_constantes()
+    actualiser_jours_feries()
+    let input = [premier_jour,num_sem]
+    
+    for (let i = 0; i < 12; i++){
+    input = actualiser_mois(i,input[0], input[1])
+    
+    }
+}
+
+
+// Actualise la liste des jours fériés pour avoir une liste de liste de 2 
+// éléments utilisable par les fonctions
+function actualiser_jours_feries(){
+    const joursAffiches = document.querySelectorAll(".jours_feries input")
+    let jours = Array.from(joursAffiches)
+    jours = jours.filter(elt => elt.checked)
+    date_jours_feries = jours.map(elt => elt.value)
+    for (i = 0; i < date_jours_feries.length; i++){
+        if (date_jours_feries[i] === "Pâques"){
+            date_jours_feries[i] = [paques.getDate(), paques.getMonth()]
+        } else if (date_jours_feries[i].length === 5){
+            date_jours_feries[i] = date_jours_feries[i].split("/")
+            date_jours_feries[i][0] = Number(date_jours_feries[i][0])
+            date_jours_feries[i][1] = Number(date_jours_feries[i][1])-1
+        } else {
+            let temp = date_jours_feries[i].split(" ")
+            let a = Number(temp[0])
+            let d = new Date(paques - a*86400000)
+            date_jours_feries[i] = [d.getDate(), d.getMonth()]
+        }
+    }
+}
+
+
+// Fonction pour créer les élements à afficher jours feries
+function creer_elements_jours_feries(){
+    for ( i = 0; i < jours_feries.length; i++){
+        const jourFerieElement = document.createElement("div")
+        jourFerieElement.classList.add("side-item")
+        joursFeriesElement.appendChild(jourFerieElement)
+        
+        const newJourFerie = document.createElement("input")
+        newJourFerie.type = "checkbox"
+        newJourFerie.id = i
+        newJourFerie.checked = jours_feries[i].actif
+        newJourFerie.value = jours_feries[i].date
+        jourFerieElement.appendChild(newJourFerie)
+        
+        const label = document.createElement("label")
+        label.for = i
+        label.innerHTML = `${jours_feries[i].nom} (${jours_feries[i].date})`
+        jourFerieElement.appendChild(label)
+        
+        newJourFerie.addEventListener("change", actualiser_annee)
+    
+    }
+}
+
+
+// Fonctions pour la création initiale des éléments de la page (cases des mois,
+// jours…)
+
+function creer_element_semaine(parent){
+    let semaineElement = document.createElement("tr")
+    parent.appendChild(semaineElement)
+    let cell = document.createElement("th")
+    cell.classList.add("num_sem")
+    semaineElement.appendChild(cell)
+    for (let i = 0; i < 7; i++){
+        cell = document.createElement("td")
+        if (i == 5){cell.classList.add("samedi")}
+        if (i == 6){cell.classList.add("dimanche")}
+        semaineElement.appendChild(cell)
+    }
+}
+
+function creer_element_mois(parent, mois){
+    let contElement = document.createElement("div")
+    contElement.classList.add("month")
+    contElement.id = liste_mois[mois]
+    parent.appendChild(contElement)
+    
+    let titreElement = document.createElement("h3")
+    titreElement.innerHTML = liste_mois_affichage[mois]
+    contElement.appendChild(titreElement)
+    let moisElement = document.createElement("table")
+    contElement.appendChild(moisElement)
+    
+    let ligne_titre = document.createElement("tr")
+    for (let i = 0; i<8; i++){
+        let cell = document.createElement("th")
+        cell.innerHTML = liste_jours[i]
+        ligne_titre.appendChild(cell)
+    }
+    moisElement.appendChild(ligne_titre)
+    for (let i = 0; i<6; i++){
+        creer_element_semaine(moisElement)
+    }
+}
+
+function creer_element_trimestre(parent, trim){
+    let contElement = document.createElement("div")
+    contElement.classList.add("trimestre")
+    contElement.id = `Q${trim}`
+    parent.appendChild(contElement)
+    
+    for (let i = 0; i<3; i++){
+        creer_element_mois(contElement, i+3*(trim-1))
+    }
+}
+
+function creer_element_annee(parent){
+    for (let i = 0; i < 4; i++){
+        creer_element_trimestre(parent,i+1)
+    }
+}
+
+
+const parent = document.getElementById('fullYear')
+creer_element_annee(parent)
+
+// Actualisation à l'ouverture de la page
+// boucle pour passer les radio buttons au bon status en fonction du report par défaut
+for (let i = 0; i < reportElement.length; i++){
+    if (eval(reportElement[i].value) === report){reportElement[i].checked = true}
+}
+
+
+creer_elements_jours_feries()
+actualiser_annee()
+
+
+// Actualisation quand on change la valeur de la case année
+anneeElement.addEventListener("change", actualiser_annee)
+reportElement[0].addEventListener("change", actualiser_annee)
+reportElement[1].addEventListener("change", actualiser_annee)
+
+        
+        </script>
+  
+    
+
